@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Playa Roulette</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500&family=DM+Mono:wght@400;500&display=swap');
+
+  /* ── PALETTE ─────────────────────────────────────────────────────────────
+     Sourced from Black Rock Desert photography + Burning Man fire/night
+     --night:    #100D1A  deep playa night sky (darkest skies in the US)
+     --range:    #2D2438  Black Rock mountain range at dusk — violet-grey
+     --haze:     #7B6E8A  horizon dust haze, muted lavender-grey
+     --clay:     #C9A96E  cracked alkali clay, warm tan
+     --alkali:   #EDE8DC  bleached playa surface, saline crust
+     --white:    #F5F0E4  bone-white, alkaline highlight
+     --fire:     #E8610A  the burn — deep ember orange
+     --ember:    #F0A320  golden ember glow
+     --char:     #3A1E0A  charcoal — burnt wood, deep fire shadow
+  ────────────────────────────────────────────────────────────────────────── */
+  :root {
+    --night:  #100D1A;
+    --range:  #2D2438;
+    --haze:   #7B6E8A;
+    --clay:   #C9A96E;
+    --alkali: #EDE8DC;
+    --white:  #F5F0E4;
+    --fire:   #E8610A;
+    --ember:  #F0A320;
+    --char:   #3A1E0A;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    background: var(--night);
+    color: var(--alkali);
+    font-family: 'DM Sans', system-ui, sans-serif;
+    overflow: hidden;
+  }
+
+  /* Playa horizon: dark night sky above, warm clay glow from below (fire on the horizon) */
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 20px 16px;
+    gap: 0;
+    position: relative;
+    background:
+      radial-gradient(ellipse 100% 50% at 50% 110%, #3A1E0A 0%, transparent 60%),
+      radial-gradient(ellipse 80% 40% at 50% 105%, #E8610A11 0%, transparent 55%),
+      linear-gradient(to top, #1A1008 0%, #100D1A 45%);
+  }
+
+  /* Cracked playa texture: subtle polygon cracks via SVG background */
+  body::after {
+    content: '';
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: 30%;
+    background-image: url("data:image/svg+xml,%3Csvg width='120' height='80' viewBox='0 0 120 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 40 L30 35 L60 42 L90 36 L120 40' stroke='%23C9A96E' stroke-width='0.4' fill='none' opacity='0.12'/%3E%3Cpath d='M20 0 L25 40 L18 80' stroke='%23C9A96E' stroke-width='0.3' fill='none' opacity='0.1'/%3E%3Cpath d='M60 0 L58 35 L65 80' stroke='%23C9A96E' stroke-width='0.3' fill='none' opacity='0.1'/%3E%3Cpath d='M100 0 L95 38 L102 80' stroke='%23C9A96E' stroke-width='0.3' fill='none' opacity='0.08'/%3E%3C/svg%3E");
+    background-size: 120px 80px;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.6;
+  }
+
+  .everything {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 360px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+
+  /* ── WORDMARK ── */
+  .wordmark-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .wordmark {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 38px;
+    letter-spacing: 0.12em;
+    color: var(--white);
+    line-height: 1;
+    /* Subtle fire glow on the text */
+    text-shadow: 0 0 40px rgba(232, 97, 10, 0.35), 0 0 80px rgba(232, 97, 10, 0.15);
+  }
+
+  .tagline {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.25em;
+    color: var(--haze);
+    text-transform: uppercase;
+  }
+
+  /* ── WHEEL ── */
+  .wheel-wrap {
+    position: relative;
+    width: 248px;
+    height: 248px;
+    flex-shrink: 0;
+  }
+
+  #wheel {
+    width: 248px;
+    height: 248px;
+    border-radius: 50%;
+    position: relative;
+    will-change: transform;
+    transition: transform 3.4s cubic-bezier(0.15, 0.65, 0.1, 1.0);
+    /* Alkali ring around wheel */
+    box-shadow:
+      0 0 0 2px rgba(201, 169, 110, 0.3),
+      0 0 0 4px rgba(16, 13, 26, 0.8),
+      0 0 28px rgba(232, 97, 10, 0.2);
+  }
+
+  #wheel svg {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    display: block;
+  }
+
+  /* Pointer — shaped like a flame tip */
+  .pointer {
+    position: absolute;
+    top: -16px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 9px solid transparent;
+    border-right: 9px solid transparent;
+    border-top: 22px solid var(--fire);
+    filter: drop-shadow(0 0 8px rgba(232, 97, 10, 0.8)) drop-shadow(0 0 16px rgba(240, 163, 32, 0.4));
+    z-index: 2;
+  }
+
+  /* Hub — cracked clay look */
+  .hub {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--range);
+    border: 2px solid var(--clay);
+    z-index: 2;
+    box-shadow: inset 0 0 8px rgba(0,0,0,0.6);
+  }
+
+  /* ── RESULT CARD ── */
+  .result-card {
+    width: 100%;
+    background: rgba(45, 36, 56, 0.85); /* --range with alpha */
+    border: 1px solid rgba(201, 169, 110, 0.25);
+    border-top: 1px solid rgba(201, 169, 110, 0.5);
+    border-radius: 12px;
+    padding: 18px 20px 16px;
+    min-height: 128px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.45s ease, transform 0.45s ease;
+    /* Alkali dust rim light */
+    box-shadow: 0 1px 0 rgba(237, 232, 220, 0.08) inset, 0 8px 32px rgba(0,0,0,0.5);
+    backdrop-filter: blur(4px);
+  }
+
+  .result-card.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .result-type {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ember);
+  }
+
+  .result-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 26px;
+    letter-spacing: 0.06em;
+    color: var(--white);
+    line-height: 1.1;
+  }
+
+  /* Thin alkali divider */
+  .divider {
+    width: 32px;
+    height: 1px;
+    background: rgba(201, 169, 110, 0.4);
+    margin: 2px 0;
+  }
+
+  .result-body {
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--alkali);
+    line-height: 1.6;
+    opacity: 0.85;
+  }
+
+  .result-location {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--clay);
+    letter-spacing: 0.04em;
+    margin-top: 2px;
+  }
+
+  /* ── HINT ── */
+  .hint {
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+    color: var(--haze);
+    text-align: center;
+    letter-spacing: 0.06em;
+    opacity: 0.7;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    #wheel { transition: none; }
+    .result-card { transition: none; }
+  }
+</style>
+</head>
+<body>
+<div class="everything">
+
+  <div class="wordmark-wrap">
+    <div class="wordmark">Playa Roulette</div>
+    <div class="tagline">spin your fate</div>
+  </div>
+
+  <div class="wheel-wrap">
+    <div class="pointer"></div>
+    <div id="wheel">
+      <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" id="wheel-svg"></svg>
+    </div>
+    <div class="hub"></div>
+  </div>
+
+  <div class="result-card" id="card">
+    <div class="result-type" id="rtype"></div>
+    <div class="result-title" id="rtitle">Spinning…</div>
+    <div class="divider"></div>
+    <div class="result-body"  id="rbody"></div>
+    <div class="result-location" id="rloc"></div>
+  </div>
+
+  <div class="hint" id="hint">refresh to respin &nbsp;·&nbsp; ← back for last spin</div>
+
+  <div style="margin-top:12px;font-family:'DM Mono',monospace;font-size:9px;color:#4A4258;text-align:center;line-height:1.6;letter-spacing:0.03em;">
+    This app is not affiliated, endorsed, or verified by Burning Man Project.
+  </div>
+
+</div>
+<script>
+// ─── DATA ────────────────────────────────────────────────────────────────────
+const OUTCOMES = [
+  { type:'Event', title:'Sunrise Flow', body:'Show up, breathe, feel ridiculous, feel good. Bring water.', loc:'6:15 & Esplanade — Center Camp, 6am' },
+  { type:'Event', title:'Fire Spinning Circle', body:'Watch the real ones do it. If someone hands you a poi, say yes.', loc:'10:00 & open playa, after dark' },
+  { type:'Event', title:'Drop Into the Bass', body:'Find the nearest sound camp. Stay for three songs minimum before judging.', loc:'9:00 corridor — follow your ears' },
+  { type:'Event', title:'Make Something', body:'Find a workshop camp. Build a thing, take it home, keep it forever.', loc:'6:00 & B — Maker Mile' },
+  { type:'Event', title:'Aerial Silks Show', body:'Humans doing impossible things with fabric. Tip your jaw back up after.', loc:'5:45 & C — Camp Velocity' },
+  { type:'Event', title:'Sunday Morning Brunch', body:'Strangers making eggs together. The conversations will be weird and perfect.', loc:'7:30 & D — The Griddle Collective' },
+  { type:'Art',   title:'Walk to the Temple', body:'Go alone. Read what people left. Leave something if you need to.', loc:'Deep playa — due 12:00 from the Man' },
+  { type:'Art',   title:'Chase a Mutant Vehicle', body:'Hunt down the coolest art car you can spot. Ask for a ride. The answer is usually yes.', loc:'Roaming — 3:00 to 9:00 arc' },
+  { type:'Art',   title:'Climb Something', body:'BRC has climbable art. Get up high. Get a new perspective on all of it.', loc:'2:00 & open playa — look for the crowd below' },
+  { type:'Art',   title:'Deep Playa Wander', body:'Kill your lights. Let your eyes adjust. Walk until you stop recognizing anything.', loc:'Beyond the art installations — no address' },
+  { type:'Social',title:'Give Something Away', body:'Find one stranger. Give them something you brought. No trading, no expecting.', loc:'Wherever you are right now' },
+  { type:'Social',title:'Crash a Stranger\'s Camp', body:'Pick a camp you\'ve never heard of. Walk in. Introduce yourself to the first person you see.', loc:'Your call — trust your gut' },
+  { type:'Social',title:'Ask One Good Question', body:'"What brought you here this year?" Ask the next person you make eye contact with. Actually listen.', loc:'Right here, right now' },
+  { type:'Social',title:'Say Yes to the Next Thing', body:'Whatever someone invites you to in the next hour — say yes. No veto.', loc:'Undefined. That\'s the point.' },
+  { type:'Social',title:'Center Camp Sit-in', body:'Order nothing, talk to everyone, stay until you\'ve made a friend you didn\'t have before.', loc:'6:00 & Esplanade — the big dome' },
+  { type:'Dare',  title:'Go Somewhere Alone', body:'Pick any direction. No phone, no friends. One hour. Come back with a story.', loc:'Wherever you end up' },
+  { type:'Dare',  title:'Upgrade Your Look', body:'Find a theme camp with a costume box. Put on one thing you\'d never wear at home. Keep it on till sunset.', loc:'Ask around — someone always has a box' },
+  { type:'Dare',  title:'Actually Rest', body:'Go back to camp. Lie down. You\'re dehydrated and you know it.', loc:'Your tent — it\'s waiting for you' },
+  { type:'Dare',  title:'Dance in Daylight', body:'Find music and dance before 4pm. No darkness to hide in. Own it.', loc:'9:00 & A — or anywhere with sound' },
+];
+
+// ─── WHEEL SEGMENTS ───────────────────────────────────────────────────────────
+// Colors derived from playa palette:
+// Event  — char/fire  (burnt sienna, fire art)
+// Art    — deep range (mountain violet, temple)
+// Social — clay/tan   (alkali flat, community)
+// Dare   — near-black (night sky, deep playa)
+const SEGMENTS = [
+  { label:'Event',  fill:'#5C2108', stroke:'#E8610A', textColor:'#F0A320' },
+  { label:'Art',    fill:'#1E1630', stroke:'#7B6E8A', textColor:'#EDE8DC' },
+  { label:'Social', fill:'#4A3418', stroke:'#C9A96E', textColor:'#F5F0E4' },
+  { label:'Dare',   fill:'#0D0A16', stroke:'#2D2438', textColor:'#7B6E8A' },
+];
+
+// ─── DRAW WHEEL ───────────────────────────────────────────────────────────────
+function drawWheel() {
+  const svg = document.getElementById('wheel-svg');
+  const cx = 100, cy = 100, r = 99;
+  let startAngle = -90;
+
+  SEGMENTS.forEach((seg) => {
+    const arc = 90;
+    const endAngle = startAngle + arc;
+    const s = startAngle * Math.PI / 180;
+    const e = endAngle   * Math.PI / 180;
+    const x1 = cx + r * Math.cos(s), y1 = cy + r * Math.sin(s);
+    const x2 = cx + r * Math.cos(e), y2 = cy + r * Math.sin(e);
+
+    // Slice
+    const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+    path.setAttribute('d',`M${cx},${cy} L${x1},${y1} A${r},${r} 0 0,1 ${x2},${y2} Z`);
+    path.setAttribute('fill', seg.fill);
+    path.setAttribute('stroke', '#100D1A');
+    path.setAttribute('stroke-width','1.5');
+    svg.appendChild(path);
+
+    // Outer rim accent stroke per segment
+    const rimArc = document.createElementNS('http://www.w3.org/2000/svg','path');
+    const rimR = r - 5;
+    const rx1 = cx + rimR * Math.cos(s + 0.04), ry1 = cy + rimR * Math.sin(s + 0.04);
+    const rx2 = cx + rimR * Math.cos(e - 0.04), ry2 = cy + rimR * Math.sin(e - 0.04);
+    rimArc.setAttribute('d',`M${rx1},${ry1} A${rimR},${rimR} 0 0,1 ${rx2},${ry2}`);
+    rimArc.setAttribute('fill','none');
+    rimArc.setAttribute('stroke', seg.stroke);
+    rimArc.setAttribute('stroke-width','1.5');
+    rimArc.setAttribute('opacity','0.55');
+    svg.appendChild(rimArc);
+
+    // Label
+    const mid = (startAngle + arc / 2) * Math.PI / 180;
+    const lx = cx + (r * 0.6) * Math.cos(mid);
+    const ly = cy + (r * 0.6) * Math.sin(mid);
+    const text = document.createElementNS('http://www.w3.org/2000/svg','text');
+    text.setAttribute('x', lx); text.setAttribute('y', ly);
+    text.setAttribute('text-anchor','middle'); text.setAttribute('dominant-baseline','central');
+    text.setAttribute('fill', seg.textColor);
+    text.setAttribute('font-size','9.5');
+    text.setAttribute('font-family','DM Mono, monospace');
+    text.setAttribute('letter-spacing','1.2');
+    text.textContent = seg.label.toUpperCase();
+    svg.appendChild(text);
+
+    // Spoke
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1',cx); line.setAttribute('y1',cy);
+    line.setAttribute('x2',x1); line.setAttribute('y2',y1);
+    line.setAttribute('stroke','#100D1A'); line.setAttribute('stroke-width','1.8');
+    svg.appendChild(line);
+
+    startAngle = endAngle;
+  });
+
+  // Outer ring
+  const ring = document.createElementNS('http://www.w3.org/2000/svg','circle');
+  ring.setAttribute('cx',cx); ring.setAttribute('cy',cy); ring.setAttribute('r',r - 0.5);
+  ring.setAttribute('fill','none'); ring.setAttribute('stroke','#C9A96E');
+  ring.setAttribute('stroke-width','1'); ring.setAttribute('opacity','0.3');
+  svg.appendChild(ring);
+}
+
+// ─── HISTORY ──────────────────────────────────────────────────────────────────
+let spinHistory = JSON.parse(sessionStorage.getItem('pr_history') || '[]');
+let currentIndex = parseInt(sessionStorage.getItem('pr_index') ?? '-1');
+
+function saveResult(result, index) {
+  spinHistory[index] = result;
+  sessionStorage.setItem('pr_history', JSON.stringify(spinHistory));
+  sessionStorage.setItem('pr_index', index);
+}
+
+// ─── DISPLAY ──────────────────────────────────────────────────────────────────
+function showResult(result) {
+  const card = document.getElementById('card');
+  card.classList.remove('spinning');
+  card.classList.add('visible');
+  document.getElementById('rtype').textContent  = result.type;
+  document.getElementById('rtitle').textContent = result.title;
+  document.getElementById('rbody').textContent  = result.body;
+  document.getElementById('rloc').textContent   = result.loc ? '⬡ ' + result.loc : '';
+}
+
+// ─── SPIN ──────────────────────────────────────────────────────────────────────
+function spin(result) {
+  const wheel = document.getElementById('wheel');
+  const card  = document.getElementById('card');
+
+  card.classList.add('visible');
+  document.getElementById('rtype').textContent  = '';
+  document.getElementById('rtitle').textContent = 'Spinning…';
+  document.getElementById('rbody').textContent  = '';
+  document.getElementById('rloc').textContent   = '';
+
+  const currentDeg = parseFloat(wheel.dataset.deg || '0');
+  const segIndex = SEGMENTS.findIndex(s => s.label === result.type);
+  const segMid   = segIndex * 90 + 45;
+  const extra    = (5 + Math.floor(Math.random() * 3)) * 360;
+  const targetDeg = currentDeg + extra + (360 - (currentDeg % 360) + segMid) % 360;
+
+  wheel.dataset.deg = targetDeg;
+  wheel.style.transform = `rotate(${targetDeg}deg)`;
+
+  setTimeout(() => showResult(result), 3500);
+}
+
+// ─── BACK BUTTON ──────────────────────────────────────────────────────────────
+window.addEventListener('popstate', (e) => {
+  if (e.state && typeof e.state.index === 'number') {
+    const prev = spinHistory[e.state.index];
+    if (prev) {
+      currentIndex = e.state.index;
+      sessionStorage.setItem('pr_index', currentIndex);
+      document.getElementById('hint').textContent = '← back for previous · refresh to respin';
+      showResult(prev);
+      const wheel = document.getElementById('wheel');
+      wheel.style.transition = 'none';
+      const segIndex = SEGMENTS.findIndex(s => s.label === prev.type);
+      const segMid = segIndex * 90 + 45;
+      wheel.style.transform = `rotate(${segMid}deg)`;
+      wheel.dataset.deg = segMid;
+      requestAnimationFrame(() => { wheel.style.transition = ''; });
+    }
+  }
+});
+
+// ─── BOOT ──────────────────────────────────────────────────────────────────────
+drawWheel();
+
+const result = OUTCOMES[Math.floor(Math.random() * OUTCOMES.length)];
+currentIndex = spinHistory.length;
+saveResult(result, currentIndex);
+history.replaceState({ index: currentIndex }, '');
+if (currentIndex > 0) history.pushState({ index: currentIndex }, '');
+
+setTimeout(() => spin(result), 100);
+</script>
+</body>
+</html>
