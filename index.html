@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Playa Roulette</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500&family=DM+Mono:wght@400;500&display=swap');
+
+  :root {
+    --night:  #100D1A;
+    --range:  #2D2438;
+    --haze:   #7B6E8A;
+    --clay:   #C9A96E;
+    --alkali: #EDE8DC;
+    --white:  #F5F0E4;
+    --fire:   #E8610A;
+    --ember:  #F0A320;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    background: var(--night);
+    color: var(--alkali);
+    font-family: 'DM Sans', system-ui, sans-serif;
+    overflow: hidden;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 20px 16px;
+    position: relative;
+    background:
+      radial-gradient(ellipse 100% 50% at 50% 110%, #3A1E0A 0%, transparent 60%),
+      linear-gradient(to top, #1A1008 0%, #100D1A 45%);
+  }
+
+  .everything {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 360px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .wordmark-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .wordmark {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 38px;
+    letter-spacing: 0.12em;
+    color: var(--white);
+    line-height: 1;
+    text-shadow: 0 0 40px rgba(232, 97, 10, 0.35), 0 0 80px rgba(232, 97, 10, 0.15);
+  }
+
+  .tagline {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.25em;
+    color: var(--haze);
+    text-transform: uppercase;
+  }
+
+  /* ── WHEEL CONTAINER ── */
+  .wheel-wrap {
+    position: relative;
+    width: 248px;
+    height: 248px;
+    flex-shrink: 0;
+  }
+
+  /* BRC map flicker — sits behind the wheel, same circle size */
+  .brc-flicker {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    overflow: hidden;
+    z-index: 0;
+  }
+
+  /* The SVG map drawn from scratch (public geometry — clock + streets) */
+  .brc-flicker svg {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    opacity: 0;
+    transition: opacity 0.05s;
+  }
+
+  .brc-flicker svg.flash-on {
+    opacity: 1;
+  }
+
+  #wheel {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    will-change: transform;
+    transition: transform 3.4s cubic-bezier(0.15, 0.65, 0.1, 1.0);
+    box-shadow:
+      0 0 0 2px rgba(201, 169, 110, 0.3),
+      0 0 0 4px rgba(16, 13, 26, 0.8),
+      0 0 28px rgba(232, 97, 10, 0.2);
+    z-index: 1;
+  }
+
+  #wheel svg {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    display: block;
+  }
+
+  .pointer {
+    position: absolute;
+    top: -16px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0; height: 0;
+    border-left: 9px solid transparent;
+    border-right: 9px solid transparent;
+    border-top: 22px solid var(--fire);
+    filter: drop-shadow(0 0 8px rgba(232,97,10,0.8));
+    z-index: 3;
+  }
+
+  .hub {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%,-50%);
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--range);
+    border: 2px solid var(--clay);
+    z-index: 3;
+    box-shadow: inset 0 0 8px rgba(0,0,0,0.6);
+  }
+
+  /* ── RESULT CARD ── */
+  .result-card {
+    width: 100%;
+    background: rgba(45, 36, 56, 0.85);
+    border: 1px solid rgba(201, 169, 110, 0.25);
+    border-top: 1px solid rgba(201, 169, 110, 0.5);
+    border-radius: 12px;
+    padding: 18px 20px 16px;
+    min-height: 128px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.45s ease, transform 0.45s ease;
+    box-shadow: 0 1px 0 rgba(237,232,220,0.08) inset, 0 8px 32px rgba(0,0,0,0.5);
+    backdrop-filter: blur(4px);
+  }
+
+  .result-card.visible { opacity: 1; transform: translateY(0); }
+
+  .result-type {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ember);
+  }
+
+  .result-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 26px;
+    letter-spacing: 0.06em;
+    color: var(--white);
+    line-height: 1.1;
+  }
+
+  .divider {
+    width: 32px; height: 1px;
+    background: rgba(201,169,110,0.4);
+    margin: 2px 0;
+  }
+
+  .result-body {
+    font-size: 13px;
+    color: var(--alkali);
+    line-height: 1.6;
+    opacity: 0.85;
+  }
+
+  .result-location {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--clay);
+    letter-spacing: 0.04em;
+    margin-top: 2px;
+  }
+
+  .hint {
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+    color: var(--haze);
+    text-align: center;
+    letter-spacing: 0.06em;
+    opacity: 0.7;
+  }
+
+  .disclaimer {
+    margin-top: 4px;
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    color: #4A4258;
+    text-align: center;
+    line-height: 1.6;
+    letter-spacing: 0.03em;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    #wheel { transition: none; }
+    .result-card { transition: none; }
+    .brc-flicker svg { transition: none; }
+  }
+</style>
+</head>
+<body>
+<div class="everything">
+
+  <div class="wordmark-wrap">
+    <div class="wordmark">Playa Roulette</div>
+    <div class="tagline">spin your fate</div>
+  </div>
+
+  <div class="wheel-wrap">
+    <div class="pointer"></div>
+
+    <!-- BRC map flicker layer — drawn from public geometry -->
+    <div class="brc-flicker">
+      <svg id="brc-map" viewBox="0 0 248 248" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+
+    <div id="wheel">
+      <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" id="wheel-svg"></svg>
+    </div>
+    <div class="hub"></div>
+  </div>
+
+  <div class="result-card" id="card">
+    <div class="result-type" id="rtype"></div>
+    <div class="result-title" id="rtitle">Spinning…</div>
+    <div class="divider"></div>
+    <div class="result-body"  id="rbody"></div>
+    <div class="result-location" id="rloc"></div>
+  </div>
+
+  <div class="hint" id="hint">refresh to respin &nbsp;·&nbsp; ← back for last spin</div>
+  <div class="disclaimer">This app is not affiliated, endorsed, or verified by Burning Man Project.</div>
+
+</div>
+<script>
+// ─── BRC MAP (drawn from scratch using public geometry only) ──────────────────
+// Semicircle city layout: clock positions 2:00–10:00, concentric street rings
+// All geometry derived from publicly known BRC facts, not from any official map file
+function drawBRCMap() {
+  const svg = document.getElementById('brc-map');
+  const cx = 124, cy = 134; // center of the Man, offset down
+  const ns = 'http://www.w3.org/2000/svg';
+
+  // Color palette — dusty blue like the original city layout feel
+  // but drawn independently
+  const ringColors = ['#1a3a5c','#1e4470','#225080','#265c90','#2a68a0','#2e74b0','#3280c0','#3a8fd0'];
+
+  // Concentric street rings (Esplanade inward to outer)
+  // BRC has ~8 lettered streets + Esplanade
+  const streets = ['Esplanade','A','B','C','D','E','F','G'];
+  const innerR = 38;   // center plaza radius
+  const ringW  = 16;   // width per ring
+
+  // Draw rings as arcs from ~2:00 to ~10:00 (about 240° sweep)
+  // 12:00 = top = 0°, clockwise
+  const startDeg = 60;  // 2:00 position
+  const endDeg   = 300; // 10:00 position
+  const sweep    = endDeg - startDeg; // 240°
+
+  streets.forEach((name, i) => {
+    const r1 = innerR + i * ringW;
+    const r2 = r1 + ringW - 1;
+    const s = (startDeg - 90) * Math.PI / 180;
+    const e = (endDeg   - 90) * Math.PI / 180;
+
+    // Outer arc path
+    const x1o = cx + r2 * Math.cos(s), y1o = cy + r2 * Math.sin(s);
+    const x2o = cx + r2 * Math.cos(e), y2o = cy + r2 * Math.sin(e);
+    const x1i = cx + r1 * Math.cos(e), y1i = cy + r1 * Math.sin(e);
+    const x2i = cx + r1 * Math.cos(s), y2i = cy + r1 * Math.sin(s);
+
+    const path = document.createElementNS(ns, 'path');
+    path.setAttribute('d',
+      `M${x1o},${y1o} A${r2},${r2} 0 0,1 ${x2o},${y2o} L${x1i},${y1i} A${r1},${r1} 0 0,0 ${x2i},${y2i} Z`
+    );
+    path.setAttribute('fill', ringColors[i] || '#2a68a0');
+    path.setAttribute('opacity', '0.85');
+    svg.appendChild(path);
+
+    // Street label at 9:00 side
+    const labelAngle = (startDeg - 90 - 3) * Math.PI / 180;
+    const labelR = r1 + ringW / 2;
+    const lx = cx + labelR * Math.cos(labelAngle) - 2;
+    const ly = cy + labelR * Math.sin(labelAngle);
+    const txt = document.createElementNS(ns, 'text');
+    txt.setAttribute('x', lx); txt.setAttribute('y', ly);
+    txt.setAttribute('text-anchor','end');
+    txt.setAttribute('dominant-baseline','central');
+    txt.setAttribute('fill','#a8c8e8');
+    txt.setAttribute('font-size','5');
+    txt.setAttribute('font-family','DM Mono, monospace');
+    txt.textContent = name;
+    svg.appendChild(txt);
+  });
+
+  // Radial clock spokes
+  const clocks = [
+    { h:'2:00', deg:60 }, { h:'2:30', deg:75 }, { h:'3:00', deg:90 },
+    { h:'3:30', deg:105 },{ h:'4:00', deg:120 },{ h:'4:30', deg:135 },
+    { h:'5:00', deg:150 },{ h:'5:30', deg:165 },{ h:'6:00', deg:180 },
+    { h:'6:30', deg:195 },{ h:'7:00', deg:210 },{ h:'7:30', deg:225 },
+    { h:'8:00', deg:240 },{ h:'8:30', deg:255 },{ h:'9:00', deg:270 },
+    { h:'9:30', deg:285 },{ h:'10:00',deg:300 },
+  ];
+
+  const outerR = innerR + streets.length * ringW;
+
+  clocks.forEach(({h, deg}) => {
+    const rad = (deg - 90) * Math.PI / 180;
+    const x1 = cx + innerR * Math.cos(rad);
+    const y1 = cy + innerR * Math.sin(rad);
+    const x2 = cx + outerR * Math.cos(rad);
+    const y2 = cy + outerR * Math.sin(rad);
+
+    const line = document.createElementNS(ns,'line');
+    line.setAttribute('x1',x1); line.setAttribute('y1',y1);
+    line.setAttribute('x2',x2); line.setAttribute('y2',y2);
+    line.setAttribute('stroke','#0a1f3a');
+    line.setAttribute('stroke-width', h.endsWith(':00') ? '1.2' : '0.5');
+    line.setAttribute('opacity', h.endsWith(':00') ? '0.9' : '0.5');
+    svg.appendChild(line);
+
+    // Hour labels on outer edge
+    if (h.endsWith(':00') || h === '6:00') {
+      const lblR = outerR + 7;
+      const lx = cx + lblR * Math.cos(rad);
+      const ly = cy + lblR * Math.sin(rad);
+      const txt = document.createElementNS(ns,'text');
+      txt.setAttribute('x',lx); txt.setAttribute('y',ly);
+      txt.setAttribute('text-anchor','middle');
+      txt.setAttribute('dominant-baseline','central');
+      txt.setAttribute('fill','#5a9ac8');
+      txt.setAttribute('font-size','6');
+      txt.setAttribute('font-family','DM Mono, monospace');
+      txt.textContent = h;
+      svg.appendChild(txt);
+    }
+  });
+
+  // Center plaza circle
+  const plaza = document.createElementNS(ns,'circle');
+  plaza.setAttribute('cx',cx); plaza.setAttribute('cy',cy);
+  plaza.setAttribute('r', innerR - 1);
+  plaza.setAttribute('fill','#0d2238');
+  plaza.setAttribute('opacity','0.9');
+  svg.appendChild(plaza);
+
+  // The Man dot
+  const manDot = document.createElementNS(ns,'circle');
+  manDot.setAttribute('cx',cx); manDot.setAttribute('cy',cy - 12);
+  manDot.setAttribute('r','4');
+  manDot.setAttribute('fill','#5a9ac8');
+  manDot.setAttribute('opacity','0.9');
+  svg.appendChild(manDot);
+
+  // Center Camp dot
+  const ccDot = document.createElementNS(ns,'circle');
+  ccDot.setAttribute('cx',cx); ccDot.setAttribute('cy',cy + 20);
+  ccDot.setAttribute('r','6');
+  ccDot.setAttribute('fill','#1a5080');
+  ccDot.setAttribute('stroke','#5a9ac8');
+  ccDot.setAttribute('stroke-width','0.8');
+  svg.appendChild(ccDot);
+
+  const ccTxt = document.createElementNS(ns,'text');
+  ccTxt.setAttribute('x',cx); ccTxt.setAttribute('y', cy + 20);
+  ccTxt.setAttribute('text-anchor','middle');
+  ccTxt.setAttribute('dominant-baseline','central');
+  ccTxt.setAttribute('fill','#a8c8e8');
+  ccTxt.setAttribute('font-size','3.5');
+  ccTxt.setAttribute('font-family','DM Mono, monospace');
+  ccTxt.textContent = 'CC';
+  svg.appendChild(ccTxt);
+
+  // Clip to circle
+  const defs = document.createElementNS(ns,'defs');
+  const clip = document.createElementNS(ns,'clipPath');
+  clip.setAttribute('id','circle-clip');
+  const clipCirc = document.createElementNS(ns,'circle');
+  clipCirc.setAttribute('cx','124'); clipCirc.setAttribute('cy','124'); clipCirc.setAttribute('r','124');
+  clip.appendChild(clipCirc);
+  defs.appendChild(clip);
+  svg.insertBefore(defs, svg.firstChild);
+  svg.setAttribute('clip-path','url(#circle-clip)');
+
+  // Background fill
+  const bg = document.createElementNS(ns,'rect');
+  bg.setAttribute('x','0'); bg.setAttribute('y','0');
+  bg.setAttribute('width','248'); bg.setAttribute('height','248');
+  bg.setAttribute('fill','#060e1a');
+  svg.insertBefore(bg, svg.firstChild);
+}
+
+// ─── FLICKER ENGINE ───────────────────────────────────────────────────────────
+let flickerInterval = null;
+const brcMap = document.getElementById('brc-map');
+
+function startFlicker() {
+  // During spin: rapid irregular flicker, like a flame or old projector
+  let frame = 0;
+  flickerInterval = setInterval(() => {
+    frame++;
+    // Irregular pattern — not every frame, creates stutter/flicker feel
+    const patterns = [1,0,1,1,0,1,0,0,1,1,0,1,0,1,1,0,0,1];
+    const on = patterns[frame % patterns.length];
+    if (on) {
+      brcMap.classList.add('flash-on');
+      // Random opacity for burn intensity variation
+      brcMap.style.opacity = (0.55 + Math.random() * 0.45).toFixed(2);
+    } else {
+      brcMap.classList.remove('flash-on');
+      brcMap.style.opacity = '0';
+    }
+  }, 80);
+}
+
+function stopFlicker() {
+  clearInterval(flickerInterval);
+  flickerInterval = null;
+  // Fade to a dim persistent glow after spin
+  brcMap.classList.add('flash-on');
+  brcMap.style.transition = 'opacity 1.2s ease';
+  brcMap.style.opacity = '0.28';
+}
+
+// ─── WHEEL DATA ───────────────────────────────────────────────────────────────
+const OUTCOMES = [
+  { type:'Event', title:'Sunrise Flow', body:'Show up, breathe, feel ridiculous, feel good. Bring water.', loc:'6:15 & Esplanade — Center Camp, 6am' },
+  { type:'Event', title:'Fire Spinning Circle', body:'Watch the real ones do it. If someone hands you a poi, say yes.', loc:'10:00 & open playa, after dark' },
+  { type:'Event', title:'Drop Into the Bass', body:'Find the nearest sound camp. Stay for three songs minimum before judging.', loc:'9:00 corridor — follow your ears' },
+  { type:'Event', title:'Make Something', body:'Find a workshop camp. Build a thing, take it home, keep it forever.', loc:'6:00 & B — Maker Mile' },
+  { type:'Event', title:'Aerial Silks Show', body:'Humans doing impossible things with fabric. Tip your jaw back up after.', loc:'5:45 & C — Camp Velocity' },
+  { type:'Event', title:'Sunday Morning Brunch', body:'Strangers making eggs together. The conversations will be weird and perfect.', loc:'7:30 & D — The Griddle Collective' },
+  { type:'Art',   title:'Walk to the Temple', body:'Go alone. Read what people left. Leave something if you need to.', loc:'Deep playa — due 12:00 from the Man' },
+  { type:'Art',   title:'Chase a Mutant Vehicle', body:'Hunt down the coolest art car you can spot. Ask for a ride. The answer is usually yes.', loc:'Roaming — 3:00 to 9:00 arc' },
+  { type:'Art',   title:'Climb Something', body:'BRC has climbable art. Get up high. Get a new perspective on all of it.', loc:'2:00 & open playa — look for the crowd below' },
+  { type:'Art',   title:'Deep Playa Wander', body:'Kill your lights. Let your eyes adjust. Walk until you stop recognizing anything.', loc:'Beyond the art installations — no address' },
+  { type:'Social',title:'Give Something Away', body:'Find one stranger. Give them something you brought. No trading, no expecting.', loc:'Wherever you are right now' },
+  { type:'Social',title:'Crash a Stranger\'s Camp', body:'Pick a camp you\'ve never heard of. Walk in. Introduce yourself to the first person you see.', loc:'Your call — trust your gut' },
+  { type:'Social',title:'Ask One Good Question', body:'"What brought you here this year?" Ask the next person you make eye contact with. Actually listen.', loc:'Right here, right now' },
+  { type:'Social',title:'Say Yes to the Next Thing', body:'Whatever someone invites you to in the next hour — say yes. No veto.', loc:'Undefined. That\'s the point.' },
+  { type:'Social',title:'Center Camp Sit-in', body:'Order nothing, talk to everyone, stay until you\'ve made a friend you didn\'t have before.', loc:'6:00 & Esplanade — the big dome' },
+  { type:'Dare',  title:'Go Somewhere Alone', body:'Pick any direction. No phone, no friends. One hour. Come back with a story.', loc:'Wherever you end up' },
+  { type:'Dare',  title:'Upgrade Your Look', body:'Find a theme camp with a costume box. Put on one thing you\'d never wear at home. Keep it on till sunset.', loc:'Ask around — someone always has a box' },
+  { type:'Dare',  title:'Actually Rest', body:'Go back to camp. Lie down. You\'re dehydrated and you know it.', loc:'Your tent — it\'s waiting for you' },
+  { type:'Dare',  title:'Dance in Daylight', body:'Find music and dance before 4pm. No darkness to hide in. Own it.', loc:'9:00 & A — or anywhere with sound' },
+];
+
+const SEGMENTS = [
+  { label:'Event',  fill:'rgba(92,33,8,0.55)',   stroke:'#E8610A', textColor:'#F0A320' },
+  { label:'Art',    fill:'rgba(30,22,48,0.55)',   stroke:'#7B6E8A', textColor:'#EDE8DC' },
+  { label:'Social', fill:'rgba(74,52,24,0.55)',   stroke:'#C9A96E', textColor:'#F5F0E4' },
+  { label:'Dare',   fill:'rgba(13,10,22,0.55)',   stroke:'#2D2438', textColor:'#7B6E8A' },
+];
+
+function drawWheel() {
+  const svg = document.getElementById('wheel-svg');
+  const cx = 100, cy = 100, r = 99;
+  let startAngle = -90;
+  SEGMENTS.forEach((seg) => {
+    const arc = 90, endAngle = startAngle + arc;
+    const s = startAngle * Math.PI / 180, e = endAngle * Math.PI / 180;
+    const x1 = cx + r*Math.cos(s), y1 = cy + r*Math.sin(s);
+    const x2 = cx + r*Math.cos(e), y2 = cy + r*Math.sin(e);
+    const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+    path.setAttribute('d',`M${cx},${cy} L${x1},${y1} A${r},${r} 0 0,1 ${x2},${y2} Z`);
+    path.setAttribute('fill', seg.fill);
+    path.setAttribute('stroke','#100D1A');
+    path.setAttribute('stroke-width','1.5');
+    svg.appendChild(path);
+    const rimR = r-5;
+    const rx1=cx+rimR*Math.cos(s+0.04),ry1=cy+rimR*Math.sin(s+0.04);
+    const rx2=cx+rimR*Math.cos(e-0.04),ry2=cy+rimR*Math.sin(e-0.04);
+    const rim = document.createElementNS('http://www.w3.org/2000/svg','path');
+    rim.setAttribute('d',`M${rx1},${ry1} A${rimR},${rimR} 0 0,1 ${rx2},${ry2}`);
+    rim.setAttribute('fill','none'); rim.setAttribute('stroke',seg.stroke);
+    rim.setAttribute('stroke-width','1.5'); rim.setAttribute('opacity','0.55');
+    svg.appendChild(rim);
+    const mid = (startAngle + arc/2)*Math.PI/180;
+    const lx = cx+(r*0.6)*Math.cos(mid), ly = cy+(r*0.6)*Math.sin(mid);
+    const text = document.createElementNS('http://www.w3.org/2000/svg','text');
+    text.setAttribute('x',lx); text.setAttribute('y',ly);
+    text.setAttribute('text-anchor','middle'); text.setAttribute('dominant-baseline','central');
+    text.setAttribute('fill',seg.textColor); text.setAttribute('font-size','9.5');
+    text.setAttribute('font-family','DM Mono, monospace'); text.setAttribute('letter-spacing','1.2');
+    text.textContent = seg.label.toUpperCase();
+    svg.appendChild(text);
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1',cx); line.setAttribute('y1',cy);
+    line.setAttribute('x2',x1); line.setAttribute('y2',y1);
+    line.setAttribute('stroke','#100D1A'); line.setAttribute('stroke-width','1.8');
+    svg.appendChild(line);
+    startAngle = endAngle;
+  });
+  const ring = document.createElementNS('http://www.w3.org/2000/svg','circle');
+  ring.setAttribute('cx',cx); ring.setAttribute('cy',cy); ring.setAttribute('r',r-0.5);
+  ring.setAttribute('fill','none'); ring.setAttribute('stroke','#C9A96E');
+  ring.setAttribute('stroke-width','1'); ring.setAttribute('opacity','0.3');
+  svg.appendChild(ring);
+}
+
+// ─── HISTORY ──────────────────────────────────────────────────────────────────
+let spinHistory = JSON.parse(sessionStorage.getItem('pr_history') || '[]');
+let currentIndex = parseInt(sessionStorage.getItem('pr_index') ?? '-1');
+function saveResult(result, index) {
+  spinHistory[index] = result;
+  sessionStorage.setItem('pr_history', JSON.stringify(spinHistory));
+  sessionStorage.setItem('pr_index', index);
+}
+
+function showResult(result) {
+  const card = document.getElementById('card');
+  card.classList.remove('spinning');
+  card.classList.add('visible');
+  document.getElementById('rtype').textContent  = result.type;
+  document.getElementById('rtitle').textContent = result.title;
+  document.getElementById('rbody').textContent  = result.body;
+  document.getElementById('rloc').textContent   = result.loc ? '⬡ ' + result.loc : '';
+}
+
+function spin(result) {
+  const wheel = document.getElementById('wheel');
+  const card  = document.getElementById('card');
+  card.classList.add('visible');
+  document.getElementById('rtype').textContent  = '';
+  document.getElementById('rtitle').textContent = 'Spinning…';
+  document.getElementById('rbody').textContent  = '';
+  document.getElementById('rloc').textContent   = '';
+
+  // Start flicker
+  startFlicker();
+
+  const currentDeg = parseFloat(wheel.dataset.deg || '0');
+  const segIndex = SEGMENTS.findIndex(s => s.label === result.type);
+  const segMid   = segIndex * 90 + 45;
+  const extra    = (5 + Math.floor(Math.random() * 3)) * 360;
+  const targetDeg = currentDeg + extra + (360 - (currentDeg % 360) + segMid) % 360;
+  wheel.dataset.deg = targetDeg;
+  wheel.style.transform = `rotate(${targetDeg}deg)`;
+
+  setTimeout(() => {
+    stopFlicker();
+    showResult(result);
+  }, 3500);
+}
+
+window.addEventListener('popstate', (e) => {
+  if (e.state && typeof e.state.index === 'number') {
+    const prev = spinHistory[e.state.index];
+    if (prev) {
+      currentIndex = e.state.index;
+      sessionStorage.setItem('pr_index', currentIndex);
+      document.getElementById('hint').textContent = '← back for previous · refresh to respin';
+      showResult(prev);
+      const wheel = document.getElementById('wheel');
+      wheel.style.transition = 'none';
+      const segIndex = SEGMENTS.findIndex(s => s.label === prev.type);
+      wheel.style.transform = `rotate(${segIndex * 90 + 45}deg)`;
+      wheel.dataset.deg = segIndex * 90 + 45;
+      requestAnimationFrame(() => { wheel.style.transition = ''; });
+    }
+  }
+});
+
+// ─── BOOT ─────────────────────────────────────────────────────────────────────
+drawBRCMap();
+drawWheel();
+
+const result = OUTCOMES[Math.floor(Math.random() * OUTCOMES.length)];
+currentIndex = spinHistory.length;
+saveResult(result, currentIndex);
+history.replaceState({ index: currentIndex }, '');
+if (currentIndex > 0) history.pushState({ index: currentIndex }, '');
+setTimeout(() => spin(result), 120);
+</script>
+</body>
+</html>
